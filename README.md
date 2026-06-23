@@ -1,22 +1,22 @@
 # PASM-Vault-Kubernetes-Agent
 
-## Pulling Secrets to Kubernetes/OpenShift containers from Entrust PASM Vault
+## Pulling Secrets to Kubernetes/OpenShift containers from Entrust Secrets Vault
 
-This document focuses on the way one can pull secrets within Kubernetes/OpenShift pods/containers using Entrust’s PASM vault. For other details on the vault, please refer to the Entrust Keycontrol (KC)
+This document focuses on the way one can pull secrets within Kubernetes/OpenShift pods/containers using Entrust’s Secrets vault. For other details on the vault, please refer to the Entrust Keycontrol (KC)
 documentation.
 
 The documentation mentions sample kubectl commands. While working with OpenShift clusters, the kubectl needs to be replaced with `oc` .
 
 ### Prerequisites
-1. PASM Vault created in Keycontrol.
-2. Desired secrets are added in PASM Vault.
-3. PASM Vault Authentication token for Vault Admin user. (Required for executing APIs on PASM vault. Details about obtaining vault login token given below. Also available in apidoc accessible at
+1. Secrets Vault created in Keycontrol.
+2. Desired secrets are added in Secrets Vault.
+3. Secrets Vault Authentication token for Vault Admin user. (Required for executing APIs on Secrets Vault. Details about obtaining vault login token given below. Also available in apidoc accessible at
 `https://<vault-ip>/apidoc under category ‘Vault Auth’)`
 
 ### Steps to pull secrets:
 Following steps need to be followed to pull secrets in the containers.
 
-#### 1. Logging in to PASM vault as admin using API and getting Vault authentication token
+#### 1. Logging in to Secrets vault as admin using API and getting Vault authentication token
 URL: Usually of the form `https://<vault-ip>/vault/1.0/Login/<vault-uuid>`. This URL is visible on vault management UI of the KeyControl. Also note the UUID from the URL. This will be required in further steps.
 
 #### Request Body:
@@ -45,7 +45,7 @@ URL: Usually of the form `https://<vault-ip>/vault/1.0/Login/<vault-uuid>`. This
 Copy the token received in the response body in the field access_token . This is required while executing APIs described in further steps and is referred as Vault Authentication Token.
 
 
-#### 2. Configuring Kubernetes cluster within PASM vault
+#### 2. Configuring Kubernetes cluster within Secrets vault
 
 To configure Kubernetes/OpenShift cluster in vault following API needs to be executed.
 
@@ -59,7 +59,7 @@ URL: `https://<vault-ip>/vault/1.0/SetK8sConfiguration`
 ```json
 {
  // URL of Kubernetes API server (or Loadbalancer if one is setup in front of
- // control plane) along with port. This URL must be accessible by PASM vault.
+ // control plane) along with port. This URL must be accessible by Secrets vault.
  // If Cluster is behind a service mesh, a proper ingress should be configured 
  // so that API server is accessible.
  "k8s_url": "https://<KC accessible IP/FQDN of K8s API server>:6443",
@@ -218,8 +218,8 @@ webhooks:
   timeoutSeconds: 5
 ```
 
-#### 4. Configuring Policy in PASM Vault
-Next thing is to create a policy in PASM Vault that will enable Kubernetes service accounts to read secrets from the vault. To create such policy following API needs to be executed.
+#### 4. Configuring Policy in Secrets Vault
+Next thing is to create a policy in Secrets Vault that will enable Kubernetes service accounts to read secrets from the vault. To create such policy following API needs to be executed.
 
 URL: `https://<vault-ip>/vault/1.0/CreatePolicy/`
 
@@ -297,7 +297,7 @@ metadata:
     entrust.vault.init.container.url: <complete-url-of-init-container-image-from-image-registry>
     entrust.vault.secret.file.k8s-box.ca-cert: output/cert.pem # box and secret name from vault and value denoting location of secret on the container. The location within container is relative to root (/).   
 spec:
-  serviceAccountName: k8suser # Service account name configured in PASM Vault Policy
+  serviceAccountName: k8suser # Service account name configured in Secrets Vault Policy
   containers:
   - name: ubuntu
     image: 10.254.154.247:5000/ubuntu:latest
@@ -327,11 +327,11 @@ In a nutshell, pod specification must have:
 
 5. Annotations in the form of `entrust.vault.secret.file.{box-name}.{secret-name}`. The `box-name` , `secret-name` placeholders within the annotation should denote the name of the box and secret name within that box which needs to be pulled. So, for example, if the secret named db-secret from the box k8s-box the name of the annotation would be `entrust.vault.secret.file.k8s-box.db-secret`. The value of the annotation should be the path to the file where the secret needs to be stored within the container. The path should be relative to the / directory. i.e., if the secret needs to be present in /output/cert.pem the value of annotation should be output/cert.pem 
 
-6. In `spec` section, the `serviceAccountName` should have the name of the service account that was added in policy in the PASM vault.
+6. In `spec` section, the `serviceAccountName` should have the name of the service account that was added in policy in the Secrets vault.
 
 
 #### 6.2 Pulling secret as environment variable within Pod
-Kubernetes supports initiating environment variables for a container either directly or from Kubernetes secrets. For security purposes, PASM vault takes the later approach. Also, if secrets are injected using environment variables, a sidecar container will be added which will delete the Kubernetes secrets after successful injection of PASM secrets as environment variables in main application container.
+Kubernetes supports initiating environment variables for a container either directly or from Kubernetes secrets. For security purposes, Secrets vault takes the later approach. Also, if secrets are injected using environment variables, a sidecar container will be added which will delete the Kubernetes secrets after successful injection of Secrets Vault secrets as environment variables in main application container.
 
 Since we need to create & delete Kubernetes secrets for this, the service account must also have the required permissions to create & delete the Kubernetes secrets. Following sample command can be used to grant a service account with required permissions.
 
@@ -374,7 +374,7 @@ metadata:
     entrust.vault.init.container.url: <complete-url-of-init-container-image-from-image-registry>
     entrust.vault.secret.env.k8s-box.ca-cert: CERT_DATA # box and secret name from vault and value denoting the name of environment variable.   
 spec:
-  serviceAccountName: k8suser # Service account name configured in PASM Vault Policy
+  serviceAccountName: k8suser # Service account name configured in Secrets Vault Policy
   containers:
   - name: ubuntu
     image: 10.254.154.247:5000/ubuntu:latest
